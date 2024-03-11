@@ -1,26 +1,38 @@
 import paramiko
 import socket
+import time
 
-
-# Replace these variables with your actual credentials and paths
+# Configuration for VPS and GitHub repository
+vps_ip = ""  # IP address of the VPS
 vps_user = "root"
-vps_password = "XXX"  # If you're using password authentication
-github_repo = "https://github.com/hassancs91/test-fastapi.git"
-target_folder = "/var/test/api1"
-domain_name = "hsuperapi.com"
-email_address = "hasan.70821@gmail.com"
+vps_password = "XXX"  # VPS password for SSH login
+target_folder = "/var/test/api1"  # Target folder on VPS where the app will reside
 
-# New configurations
-service_name = "fastapi_app"  # Default service name
-nginx_config_name = "fastapi"  # Default Nginx config name
-enable_ssl = True  # Set to False to disable SSL setup
 
-use_ssh_key = False  # Set to True to use SSH key authentication
-ssh_key_file_path = "/path/to/ssh/key"  # Replace with the actual path to the SSH key
-ssh_key_passphrase = None 
+# SSH key authentication configuration
+use_ssh_key = False  # Flag to use SSH key authentication
+ssh_key_file_path = "/path/to/ssh/key"  # Path to SSH key file
+ssh_key_passphrase = None  # Passphrase for SSH key (if applicable)
 
-vps_ip = "146.190.117.68"
 
+# GitHub repository configuration
+github_repo = ""  # GitHub repository URL
+is_private_repo = False  # Flag to indicate if the GitHub repository is private
+github_token = "XXX"  # GitHub token for cloning private repository
+
+# SSL configuration
+domain_name = ""  # Domain name for the FastAPI app
+email_address = ""  # Email for SSL setup with Let's Encrypt
+
+
+update_api = False  # Flag to update the API instead of a fresh setup
+
+# Service and Nginx configurations
+service_name = "fastapi_app"  # Name of the systemd service
+nginx_config_name = "fastapi"  # Name of the Nginx configuration file
+
+# Command to start the FastAPI app
+exec_start_command = f"{target_folder}/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000"
 
 
 def execute_command(ssh_client, command):
@@ -42,8 +54,6 @@ def execute_command(ssh_client, command):
         exit(1)
 
     return stdout.read().decode()
-
-
 
 def test_ssh_connection(ip, username, password=None, key_file=None, key_passphrase=None):
     try:
@@ -105,6 +115,7 @@ def setup_ssh_client(ip, username, password=None, key_file=None, key_passphrase=
 
 def install_dependencies(ssh_client):
     try:
+        #wait_for_apt_lock_release(ssh_client, timeout=600)
         print("Installing dependencies (Python, Git, Nginx)...")
         dependencies = ['python3', 'python3-pip','python3.11-venv', 'git', 'nginx']
         execute_command(ssh_client, f'sudo apt-get update && sudo apt-get install -y {" ".join(dependencies)}')
@@ -112,8 +123,6 @@ def install_dependencies(ssh_client):
     except Exception as e:
         print(f"Error installing dependencies: {e}")
         exit(1)
-
-
 
 def create_virtual_environment(ssh_client):
     try:
@@ -124,11 +133,16 @@ def create_virtual_environment(ssh_client):
         print(f"Error creating virtual environment: {e}")
         exit(1)
 
-
 def clone_repo(ssh_client):
     try:
         print(f"Cloning repository {github_repo}...")
-        execute_command(ssh_client, f'sudo git clone {github_repo} {target_folder}')
+
+        repo_url = github_repo
+        if is_private_repo:
+            # Modify the URL to include the PAT for authentication
+            repo_url = github_repo.replace('https://', f'https://{github_token}@')
+
+        execute_command(ssh_client, f'sudo git clone {repo_url} {target_folder}')
         print("Repository cloned.")
         create_virtual_environment(ssh_client)
     except Exception as e:
@@ -144,7 +158,6 @@ def install_requirements(ssh_client):
     except Exception as e:
         print(f"Error installing Python requirements: {e}")
         exit(1)
-
 
 def configure_nginx(ssh_client):
     try:
@@ -171,10 +184,6 @@ def configure_nginx(ssh_client):
         print(f"Error configuring Nginx: {e}")
         exit(1)
 
-
-
-
-
 def setup_service(ssh_client):
     try:
         print("Setting up FastAPI as a systemd service...")
@@ -187,7 +196,7 @@ def setup_service(ssh_client):
         [Service]
         User={vps_user}
         WorkingDirectory={target_folder}
-        ExecStart={target_folder}/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000
+        ExecStart={exec_start_command.format(target_folder=target_folder)}
 
         [Install]
         WantedBy=multi-user.target
@@ -202,6 +211,7 @@ def setup_service(ssh_client):
 
 def setup_ssl_silently(ssh_client):
     try:
+        #wait_for_apt_lock_release(ssh_client, timeout=600)
         print("Setting up SSL with Let's Encrypt...")
         execute_command(ssh_client, 'sudo apt-get update')
         execute_command(ssh_client, 'sudo apt-get install -y certbot python3-certbot-nginx')
@@ -213,53 +223,91 @@ def setup_ssl_silently(ssh_client):
         print(f"Error setting up SSL: {e}")
         exit(1)
 
-
-def check_service_status(ssh_client):
+def check_service_status(ssh_client, retries=3, delay=5):
     try:
         print("Checking FastAPI service status...")
-        execute_command(ssh_client, 'sudo systemctl start fastapi-app')
-        execute_command(ssh_client, 'sudo systemctl status fastapi-app')
-        print("FastAPI service is active and running.")
+
+        for attempt in range(retries):
+            status_output = execute_command(ssh_client, f'sudo systemctl is-active {service_name}')
+
+            if "active" in status_output:
+                print("FastAPI service is active and running.")
+                return
+            else:
+                print(f"FastAPI service is not active. Attempt {attempt + 1} of {retries}. Retrying in {delay} seconds...")
+                time.sleep(delay)
+
+        print("Failed to start FastAPI service after multiple attempts.")
+        exit(1)
+
     except Exception as e:
         print(f"Error checking FastAPI service status: {e}")
         exit(1)
-
     
+def force_update_application_and_restart_service(ssh_client):
+    try:
+        print("Forcing update of application from GitHub repository...")
+        # Resetting any changes and pulling the latest code from the repository
+        execute_command(ssh_client, f'cd {target_folder} && sudo git fetch --all')
+        execute_command(ssh_client, f'cd {target_folder} && sudo git reset --hard origin/main')
+
+        # Installing any new requirements
+        print("Installing any new requirements...")
+        execute_command(ssh_client, f'cd {target_folder} && source venv/bin/activate && pip install -r requirements.txt')
+
+        # Restarting the FastAPI service
+        print("Restarting the FastAPI service...")
+        execute_command(ssh_client, f'sudo systemctl restart {service_name}')
+
+        print("Forced application update and restart complete.")
+    except Exception as e:
+        print(f"Error in forced update of application and restarting service: {e}")
+        exit(1)
 
 def main():
-    test_ssh_connection(vps_ip, vps_user, vps_password)
-
-
+    # Establish SSH connection to the VPS
     if use_ssh_key:
+        # Test SSH connection using an SSH key
         test_ssh_connection(vps_ip, vps_user, key_file=ssh_key_file_path, key_passphrase=ssh_key_passphrase)
+        # Set up SSH client using the SSH key
         ssh_client = setup_ssh_client(vps_ip, vps_user, key_file=ssh_key_file_path, key_passphrase=ssh_key_passphrase)
     else:
+        # Test SSH connection using a password
         test_ssh_connection(vps_ip, vps_user, vps_password)
+        # Set up SSH client using a password
         ssh_client = setup_ssh_client(vps_ip, vps_user, vps_password)
-    
 
-    if enable_ssl:
+    if update_api:
+        # If updating the API, run the update process
+        force_update_application_and_restart_service(ssh_client)
+        # Check the status of the service after updating
+        check_service_status(ssh_client)
+        # Close SSH connection
+        ssh_client.close()
+        print("FastAPI application update complete.")
+    else:
+        # If setting up a new deployment
+        # Check if the domain resolves to the correct IP
         test_domain_resolution(domain_name, vps_ip)
-
-
-
-    test_folder_existence_and_create(ssh_client)
-
-    install_dependencies(ssh_client)
-    clone_repo(ssh_client)
-    install_requirements(ssh_client)
-    configure_nginx(ssh_client)
-    setup_service(ssh_client)
-
-
-    if enable_ssl:
+        # Ensure the target folder exists or create it
+        test_folder_existence_and_create(ssh_client)
+        # Install necessary system dependencies
+        install_dependencies(ssh_client)
+        # Clone the repository from GitHub
+        clone_repo(ssh_client)
+        # Install Python requirements from the requirements.txt file
+        install_requirements(ssh_client)
+        # Configure Nginx as a reverse proxy for FastAPI
+        configure_nginx(ssh_client)
+        # Set up FastAPI as a systemd service
+        setup_service(ssh_client)
+        # Set up SSL using Let's Encrypt
         setup_ssl_silently(ssh_client)
-
-
-    check_service_status(ssh_client)
-
-    ssh_client.close()
-    print("FastAPI application deployment complete.")
+        # Check if the FastAPI service is running correctly
+        check_service_status(ssh_client)
+        # Close SSH connection
+        ssh_client.close()
+        print("FastAPI application deployment complete.")
 
 if __name__ == "__main__":
     main()
