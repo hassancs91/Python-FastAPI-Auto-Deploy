@@ -5,8 +5,8 @@ import time
 # Configuration for VPS and GitHub repository
 vps_ip = ""  # IP address of the VPS
 vps_user = "root"
-vps_password = "XXX"  # VPS password for SSH login
-target_folder = "/var/test/api1"  # Target folder on VPS where the app will reside
+vps_password = ""  # VPS password for SSH login
+target_folder = ""  # Target folder on VPS where the app will reside
 
 
 # SSH key authentication configuration
@@ -16,7 +16,7 @@ ssh_key_passphrase = None  # Passphrase for SSH key (if applicable)
 
 
 # GitHub repository configuration
-github_repo = ""  # GitHub repository URL
+github_repo = "https://github.com/hassancs91/SimplerDictionary-API.git"  # GitHub repository URL
 is_private_repo = False  # Flag to indicate if the GitHub repository is private
 github_token = "XXX"  # GitHub token for cloning private repository
 
@@ -29,7 +29,7 @@ update_api = False  # Flag to update the API instead of a fresh setup
 
 # Service and Nginx configurations
 service_name = "fastapi_app"  # Name of the systemd service
-nginx_config_name = "fastapi"  # Name of the Nginx configuration file
+nginx_config_name = "fastapi_app"  # Name of the Nginx configuration file
 
 # Command to start the FastAPI app
 exec_start_command = f"{target_folder}/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000"
@@ -117,7 +117,7 @@ def install_dependencies(ssh_client):
     try:
         #wait_for_apt_lock_release(ssh_client, timeout=600)
         print("Installing dependencies (Python, Git, Nginx)...")
-        dependencies = ['python3', 'python3-pip','python3.11-venv', 'git', 'nginx']
+        dependencies = ['python3', 'python3-pip','python3-venv', 'git', 'nginx']
         execute_command(ssh_client, f'sudo apt-get update && sudo apt-get install -y {" ".join(dependencies)}')
         print("Dependencies installed.")
     except Exception as e:
@@ -288,11 +288,11 @@ def main():
     else:
         # If setting up a new deployment
         # Check if the domain resolves to the correct IP
-        test_domain_resolution(domain_name, vps_ip)
+        #test_domain_resolution(domain_name, vps_ip)
         # Ensure the target folder exists or create it
         test_folder_existence_and_create(ssh_client)
         # Install necessary system dependencies
-        install_dependencies(ssh_client)
+        #install_dependencies(ssh_client)
         # Clone the repository from GitHub
         clone_repo(ssh_client)
         # Install Python requirements from the requirements.txt file
