@@ -18,9 +18,7 @@ You can now run the streamlit UI and Manage Multiple API deployments with a simp
 
 Just install the requiremnts, and run the ui:
 
-```streamlit run app.py
-
-
+`streamlit run app.py`
 
 You can still use the old script:
 
@@ -74,11 +72,9 @@ Before running the script, you will need to set several configuration variables.
 
 Ensure all these variables are correctly set in the script before executing it to ensure a smooth deployment process.
 
-
 ## Domain Setup
 
 - Ensure that the DNS settings for your domain name (`domain_name`) are configured to point to your VPS IP address (`vps_ip`). This is necessary for your domain to correctly resolve to your FastAPI application.
-
 
 ## Planned Updates
 
@@ -94,4 +90,7 @@ Contributions are welcome! Feel free to submit a pull request or create an issue
 ## License
 
 This project is licensed under the MIT License
+
+```
+
 ```
