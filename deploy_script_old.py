@@ -2,9 +2,12 @@ import paramiko
 import socket
 import time
 
+#This is the basic version of this script.
+
+
 # Configuration for VPS and GitHub repository
 vps_ip = ""  # IP address of the VPS
-vps_user = "root"
+vps_user = ""
 vps_password = ""  # VPS password for SSH login
 target_folder = ""  # Target folder on VPS where the app will reside
 
@@ -16,9 +19,9 @@ ssh_key_passphrase = None  # Passphrase for SSH key (if applicable)
 
 
 # GitHub repository configuration
-github_repo = "https://github.com/hassancs91/SimplerDictionary-API.git"  # GitHub repository URL
+github_repo = "https://github.com/hassancs91/"  # GitHub repository URL
 is_private_repo = False  # Flag to indicate if the GitHub repository is private
-github_token = "XXX"  # GitHub token for cloning private repository
+github_token = ""  # GitHub token for cloning private repository
 
 # SSL configuration
 domain_name = ""  # Domain name for the FastAPI app
@@ -28,11 +31,11 @@ email_address = ""  # Email for SSL setup with Let's Encrypt
 update_api = False  # Flag to update the API instead of a fresh setup
 
 # Service and Nginx configurations
-service_name = "fastapi_app"  # Name of the systemd service
-nginx_config_name = "fastapi_app"  # Name of the Nginx configuration file
+service_name = ""  # Name of the systemd service
+nginx_config_name = ""  # Name of the Nginx configuration file
 
 # Command to start the FastAPI app
-exec_start_command = f"{target_folder}/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000"
+exec_start_command = f"{target_folder}/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000 --workers 2"
 
 
 def execute_command(ssh_client, command):
@@ -288,7 +291,7 @@ def main():
     else:
         # If setting up a new deployment
         # Check if the domain resolves to the correct IP
-        #test_domain_resolution(domain_name, vps_ip)
+        test_domain_resolution(domain_name, vps_ip)
         # Ensure the target folder exists or create it
         test_folder_existence_and_create(ssh_client)
         # Install necessary system dependencies

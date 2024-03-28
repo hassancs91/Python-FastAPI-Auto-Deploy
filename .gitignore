@@ -6,7 +6,11 @@
 # Exclude log folder
 log/
 
+.env
+api_configs.json
 
+
+skeleton.py
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -64,3 +68,4 @@ coverage.xml
 docs/_build/
 
 *.pyc
+config_manager.py
