@@ -13,6 +13,17 @@ This project contains a Python script for automating the deployment of FastAPI a
 
 ## Getting Started
 
+NEW Update!
+You can now run the streamlit UI and Manage Multiple API deployments with a simple clean User interface.
+
+Just install the requiremnts, and run the ui:
+
+```streamlit run app.py
+
+
+
+You can still use the old script:
+
 To use this script, clone the repository and modify the configuration variables in the script to match your server and application details.
 
 ### Prerequisites
@@ -83,3 +94,4 @@ Contributions are welcome! Feel free to submit a pull request or create an issue
 ## License
 
 This project is licensed under the MIT License
+```
