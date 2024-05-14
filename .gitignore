@@ -68,4 +68,3 @@ coverage.xml
 docs/_build/
 
 *.pyc
-config_manager.py
