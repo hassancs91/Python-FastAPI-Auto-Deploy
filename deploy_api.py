@@ -53,7 +53,8 @@ def clone_repo(ssh_client,github_repo,github_token,target_folder,is_private_repo
         if is_private_repo:
             # Modify the URL to include the PAT for authentication
             repo_url = github_repo.replace('https://', f'https://{github_token}@')
-
+        
+        
         execute_command(ssh_client, f'sudo git clone {repo_url} {target_folder}')
         st.write("Repository cloned.")
         create_virtual_environment(ssh_client,target_folder)

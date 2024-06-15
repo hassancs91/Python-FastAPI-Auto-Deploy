@@ -49,7 +49,7 @@ elif option == "Update API":
             # Setup SSH client
             ssh_client = establish_connection(config["vps_ip"],config["vps_user"],config["vps_password"],config["ssh_key_file_path"],config["ssh_key_passphrase"],config["use_ssh_key"])
             #update the api
-            update_api_and_restart(ssh_client,config["service_name"],config["target_folder"])
+            update_api_and_restart(ssh_client,config["github_token"],config["service_name"],config["target_folder"],config["github_repo"])
             # Check the status of the service after updating
             check_service_status(ssh_client,config["service_name"], retries=3, delay=5 )
             ssh_client.close()

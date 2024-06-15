@@ -1,5 +1,7 @@
 
 /myenv
+/ven
+
 # Exclude .vscode settings
 .vscode/
 
